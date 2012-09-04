@@ -1,9 +1,27 @@
 #!/usr/bin/perl -w
 
+=head1 NAME
+
+dh_debugedit - edit paths to debug source files
+
+=cut
+
 use strict;
 use Cwd ();
 use File::Find;
 use Debian::Debhelper::Dh_Lib;
+
+=head1 SYNOPSIS
+
+B<dh_debugedit> [S<I<debhelper options>>]
+
+=head1 DESCRIPTION
+
+B<dh_debugedit> is a debhelper program that uses debugedit to extract source
+information from ELF binaries and rewrite source paths. This allows source to
+be included with debug packages in /usr/src/debug.
+
+=cut
 
 init();
 
@@ -26,6 +44,7 @@ my $destdir = "/usr/src/debug";
 
 # List of source files to copy to destdir
 my $filelist = $srcdir . "/debian/debugedit.list";
+unlink($filelist) if -e $filelist;
 
 # Borrowed from dh_strip
 sub get_file_type {
@@ -61,3 +80,15 @@ foreach my $package (@{$dh{DOPACKAGES}}) {
 
   find(\&editfile, $tmp);
 }
+
+=head1 SEE ALSO
+
+L<debhelper(7)>
+
+This program is part of debhelper.
+
+=head1 AUTHOR
+
+Jason Conti <jason.conti@gmail.com>
+
+=cut
