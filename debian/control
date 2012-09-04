@@ -1,0 +1,14 @@
+Source: dh-debugedit
+Section: devel
+Priority: optional
+Maintainer: Jason Conti <jason.conti@gmail.com>
+Build-Depends: debhelper (>= 8.0.0)
+Standards-Version: 3.9.3
+Vcs-Bzr: https://code.launchpad.net/~jconti/+junk/dh-debugedit
+
+Package: dh-debugedit
+Architecture: all
+Depends: ${perl:Depends}, ${misc:Depends}, debhelper, debugedit
+Description: debhelper add-on to extract debug information
+ dh-debugedit provides dh_debugedit to extract sources for binaries
+ to /usr/src/debug.

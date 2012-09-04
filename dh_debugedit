@@ -1,0 +1,63 @@
+#!/usr/bin/perl -w
+
+use strict;
+use Cwd ();
+use File::Find;
+use Debian::Debhelper::Dh_Lib;
+
+init();
+
+my $debugedit = cross_command("debugedit");
+
+# Get the source path
+my $srcdir = ".";
+$srcdir = $dh{SOURCEDIR} if defined $dh{SOURCEDIR};
+$srcdir = Cwd::abs_path($srcdir);
+
+print "Source: ", $srcdir, "\n";
+
+# Parent of the source directory
+my $basedir = dirname($srcdir);
+
+print "Base: ", $basedir, "\n";
+
+# Destination to rewrite the base path into
+my $destdir = "/usr/src/debug";
+
+# List of source files to copy to destdir
+my $filelist = $srcdir . "/debian/debugedit.list";
+
+# Borrowed from dh_strip
+sub get_file_type {
+  my $file = shift;
+  open(FILE, "-|")
+    || exec("file", $file)
+    || die "can't exec file: $!";
+  my $type = <FILE>;
+  close FILE;
+  return $type;
+}
+
+sub editfile {
+  # Skip links and directories
+  return if -l $_ or -d $_;
+
+  my $file = $File::Find::name;
+  print "File: ", $_, " Path: ", $file, "\n";
+
+  my $type = get_file_type($_);
+  print "Type: ", $type, "\n";
+
+  if ($type =~ m/.*ELF.*, not stripped.*/) {
+    print "Editing: ", $_, "\n";
+    doit($debugedit, "-b", $basedir, "-d", $destdir, "-l", $filelist, $_);
+  }
+}
+
+foreach my $package (@{$dh{DOPACKAGES}}) {
+  my $tmp=tmpdir($package);
+
+  print "Package: ", $package, " Directory: ", $tmp, "\n";
+
+  find(\&editfile, $tmp);
+}
