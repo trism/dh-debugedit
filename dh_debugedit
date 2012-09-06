@@ -105,7 +105,20 @@ open(FILE, "<", "$filelist") || die "failed to open $filelist: $!";
 while (my $line = <FILE>) {
   chomp $line;
   $line =~ s/$srcname\/?//;
-  if ($line ne "" and ! -d $line) {
+
+  # Skip blank lines
+  next if $line eq "";
+
+  # We create the leading directories below, but we need to make all
+  # directories in $filelist because some of the will be empty, but the path to
+  # the source file is relative (for example, file ../../tools/dbus-monitor.c
+  # in /usr/src/debug/dbus/build/tools/)
+  if (-d $line) {
+    doit("install", "-d", $debugsrcdir.$line) unless -e $debugsrcdir.$line;
+  }
+
+  # Skip internal, built-in lines, not sure why debugedit includes them at all
+  elsif (! ($line =~ m/.*(<internal>|<built-in>)$/)) {
     my $filename = basename($line);
     my $filepath = dirname($line);
     my $installpath = $filepath eq $line ? $debugsrcdir : $debugsrcdir.$filepath;
