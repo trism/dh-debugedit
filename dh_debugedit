@@ -13,7 +13,7 @@ use Debian::Debhelper::Dh_Lib;
 
 =head1 SYNOPSIS
 
-B<dh_debugedit> [S<I<debhelper options>>]
+B<dh_debugedit> [S<I<debhelper options>>] [B<--dbg-package=>I<package>]
 
 =head1 DESCRIPTION
 
@@ -33,6 +33,11 @@ $srcdir = $dh{SOURCEDIR} if defined $dh{SOURCEDIR};
 $srcdir = Cwd::abs_path($srcdir);
 
 print "Source: ", $srcdir, "\n";
+
+# Name of the source directory
+my $srcname = basename($srcdir);
+
+print "Source Name: ", $srcname, "\n";
 
 # Parent of the source directory
 my $basedir = dirname($srcdir);
@@ -57,6 +62,18 @@ sub get_file_type {
   return $type;
 }
 
+sub read_filelist {
+  my @files = ();
+  open(FILE, "-|")
+    || exec("sort", "-z", "-u", $filelist)
+    || die "can't exec sort: $!";
+  while (my $file = <FILE>) {
+    push @files, $file;
+  }
+  close FILE;
+  return @files;
+}
+
 sub editfile {
   # Skip links and directories
   return if -l $_ or -d $_;
@@ -73,13 +90,60 @@ sub editfile {
   }
 }
 
+# Rewrite the source directory in each ELF binary and save the source filenames
+# in $filelist
 foreach my $package (@{$dh{DOPACKAGES}}) {
-  my $tmp=tmpdir($package);
+  my $tmp = tmpdir($package);
 
   print "Package: ", $package, " Directory: ", $tmp, "\n";
 
   find(\&editfile, $tmp);
 }
+
+# Get the path to copy the source files to
+my $debugtmp="";
+if (ref $dh{DEBUGPACKAGES}) {
+  my $debugpackage = @{$dh{DEBUGPACKAGES}}[0];
+  if (! grep { $_ eq $debugpackage } getpackages()) {
+    error("debug package $debugpackage not listed in control file");
+  }
+  $debugtmp = tmpdir($debugpackage);
+}
+
+# No place to copy to, so we are done
+else {
+  exit 0;
+}
+
+print "Debug Temp: ", $debugtmp, "\n";
+
+my $debugsrcdir = $debugtmp.$destdir."/$srcname/";
+
+# Copy the source files to the debug tmp
+
+# debugedit writes nul terminated lines to $filelist, translate these to newline
+complex_doit("sort -z -u $filelist | tr '\\0' '\\n' > $filelist.out");
+doit("mv $filelist.out $filelist");
+
+open(FILE, "<", "$filelist") || die "failed to open $filelist: $!";
+
+while (my $line = <FILE>) {
+  chomp $line;
+  $line =~ s/$srcname\/?//;
+  if ($line ne "" and ! -d $line) {
+    my $filename = basename($line);
+    my $filepath = dirname($line);
+    my $installpath = $filepath eq $line ? $debugsrcdir : $debugsrcdir.$filepath;
+    print "Found Name: ", $filename, "\n";
+    print "Found Path: ", $filepath, "\n";
+    print "Found Install: ", $installpath, "\n";
+    
+    doit("install", "-d", $installpath) unless -e $installpath;
+    doit("install", "-m", "644", $line, $installpath."/$filename");
+  }
+}
+
+close FILE;
 
 =head1 SEE ALSO
 
