@@ -32,17 +32,11 @@ my $srcdir = ".";
 $srcdir = $dh{SOURCEDIR} if defined $dh{SOURCEDIR};
 $srcdir = Cwd::abs_path($srcdir);
 
-print "Source: ", $srcdir, "\n";
-
 # Name of the source directory
 my $srcname = basename($srcdir);
 
-print "Source Name: ", $srcname, "\n";
-
 # Parent of the source directory
 my $basedir = dirname($srcdir);
-
-print "Base: ", $basedir, "\n";
 
 # Destination to rewrite the base path into
 my $destdir = "/usr/src/debug";
@@ -62,30 +56,14 @@ sub get_file_type {
   return $type;
 }
 
-sub read_filelist {
-  my @files = ();
-  open(FILE, "-|")
-    || exec("sort", "-z", "-u", $filelist)
-    || die "can't exec sort: $!";
-  while (my $file = <FILE>) {
-    push @files, $file;
-  }
-  close FILE;
-  return @files;
-}
-
+# Check the file type and run debugedit if it is an unstripped ELF binary
 sub editfile {
   # Skip links and directories
   return if -l $_ or -d $_;
 
-  my $file = $File::Find::name;
-  print "File: ", $_, " Path: ", $file, "\n";
-
   my $type = get_file_type($_);
-  print "Type: ", $type, "\n";
 
   if ($type =~ m/.*ELF.*, not stripped.*/) {
-    print "Editing: ", $_, "\n";
     doit($debugedit, "-b", $basedir, "-d", $destdir, "-l", $filelist, $_);
   }
 }
@@ -94,8 +72,6 @@ sub editfile {
 # in $filelist
 foreach my $package (@{$dh{DOPACKAGES}}) {
   my $tmp = tmpdir($package);
-
-  print "Package: ", $package, " Directory: ", $tmp, "\n";
 
   find(\&editfile, $tmp);
 }
@@ -115,8 +91,7 @@ else {
   exit 0;
 }
 
-print "Debug Temp: ", $debugtmp, "\n";
-
+# Install source files to a path like debian/package-dbg/usr/src/debug/package-name/
 my $debugsrcdir = $debugtmp.$destdir."/$srcname/";
 
 # Copy the source files to the debug tmp
@@ -134,9 +109,6 @@ while (my $line = <FILE>) {
     my $filename = basename($line);
     my $filepath = dirname($line);
     my $installpath = $filepath eq $line ? $debugsrcdir : $debugsrcdir.$filepath;
-    print "Found Name: ", $filename, "\n";
-    print "Found Path: ", $filepath, "\n";
-    print "Found Install: ", $installpath, "\n";
     
     doit("install", "-d", $installpath) unless -e $installpath;
     doit("install", "-m", "644", $line, $installpath."/$filename");
