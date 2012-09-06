@@ -1,1 +1,2 @@
 dh_debugedit usr/bin
+debugedit.mk usr/share/cdbs/1/rules
