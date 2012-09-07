@@ -97,14 +97,14 @@ my $debugsrcdir = $debugtmp.$destdir."/$srcname/";
 # Copy the source files to the debug tmp
 
 # debugedit writes nul terminated lines to $filelist, translate these to newline
-complex_doit("sort -z -u $filelist | tr '\\0' '\\n' > $filelist.out");
-doit("mv $filelist.out $filelist");
+complex_doit("sort -z -u '$filelist' | tr '\\0' '\\n' > '$filelist.out'");
+doit("mv '$filelist.out' '$filelist'");
 
 open(FILE, "<", "$filelist") || die "failed to open $filelist: $!";
 
 while (my $line = <FILE>) {
   chomp $line;
-  $line =~ s/$srcname\/?//;
+  $line =~ s/\Q$srcname\E\/?//;
 
   # Skip blank lines
   next if $line eq "";
