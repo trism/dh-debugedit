@@ -76,6 +76,9 @@ foreach my $package (@{$dh{DOPACKAGES}}) {
   find(\&editfile, $tmp);
 }
 
+# Didn't find any source files to copy, so we are done
+exit 0 unless -e $filelist;
+
 # Get the path to copy the source files to
 my $debugtmp="";
 if (ref $dh{DEBUGPACKAGES}) {
